@@ -10,19 +10,49 @@ logger.setLevel(logging.INFO)
 
 
 def get_slack_message_content_and_url(
-    message_ts: str, channel_id: str, slack_user_token: str
+    message_ts: str, channel_id: str, client: WebClient
 ):
-    client = WebClient(token=slack_user_token)
-
     res = client.conversations_history(
         channel=channel_id, latest=message_ts, inclusive=True, limit=1
     )
     message = res["messages"][0]["text"]
+    ts = res["messages"][0]["ts"]
 
-    res = client.chat_getPermalink(channel=channel_id, message_ts=message_ts)
+    if ts != message_ts:
+        res = client.conversations_replies(
+            channel=channel_id,
+            ts=message_ts,
+            inclusive=True,
+            limit=1,
+        )
+        message = res["messages"][0]["text"]
+        ts = res["messages"][0]["ts"]
+
+    res = client.chat_getPermalink(channel=channel_id, message_ts=ts)
     url = res["permalink"]
 
     return (message, url)
+
+
+def reply_to_slack_thread(
+    page_url: str, message_ts: str, channel_id: str, client: WebClient
+):
+    # スタンプの押されたメッセージがリプライの場合、リプライ先を親メッセージにする
+    res = client.conversations_replies(
+        channel=channel_id, ts=message_ts, limit=1, inclusive=True
+    )
+
+    if "thread_ts" in res["messages"]:
+        thread_ts = res["messages"][0]["thread_ts"]
+        message_ts = thread_ts if message_ts != thread_ts else message_ts
+
+    res = client.chat_postMessage(
+        channel=channel_id,
+        thread_ts=message_ts,
+        text=f"割れ窓タスクに追加しました\n{page_url}",
+    )
+
+    return res
 
 
 def main(event: dict, context: dict):
@@ -42,8 +72,8 @@ def main(event: dict, context: dict):
     )
     notion = Client(auth=notion_api_secret)
 
-    slack_user_token = os.getenv(
-        "SLACK_USER_TOKEN", "SLACK_USER_TOKEN not set"
+    slack_bot_user_token = os.getenv(
+        "SLACK_BOT_USER_TOKEN", "SLACK_BOT_USER_TOKEN not set"
     )
     slack_reaction = os.getenv("REACTION_NAME", "tada")
 
@@ -60,8 +90,11 @@ def main(event: dict, context: dict):
 
         channel_id = body["event"]["item"]["channel"]
         message_ts = body["event"]["item"]["ts"]
+
+        bot_client = WebClient(token=slack_bot_user_token)
+
         message, message_url = get_slack_message_content_and_url(
-            message_ts, channel_id, slack_user_token
+            message_ts, channel_id, bot_client
         )
 
         page = notion.databases.query(
@@ -73,6 +106,7 @@ def main(event: dict, context: dict):
         )
 
         if page["results"]:
+            logger.info("Page already exists. skipping")
             return {
                 "statusCode": 200,
                 "body": "Page already exists. skipping",
@@ -114,5 +148,14 @@ def main(event: dict, context: dict):
         }
 
         res = notion.pages.create(**page_object)
+        page_url = res["url"]
 
-        return {"status": 200, "body": res}
+        res = reply_to_slack_thread(
+            page_url, message_ts, channel_id, bot_client
+        )
+        logging.info(res)
+
+        return {
+            "statusCode": 200,
+            "body": res,
+        }

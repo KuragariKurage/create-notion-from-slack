@@ -25,7 +25,7 @@ functions:
     memorySize: 256
     timeout: 30
     environment:
-      SLACK_USER_TOKEN: ${env:SLACK_USER_TOKEN}
+      SLACK_BOT_USER_TOKEN: ${env:SLACK_BOT_USER_TOKEN}
       REACTION_NAME: ${env:REACTION_NAME}
       NOTION_DATABASE_ID: ${env:NOTION_DATABASE_ID}
       NOTION_API_TOKEN: ${env:NOTION_API_TOKEN}
