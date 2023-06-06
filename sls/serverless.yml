@@ -1,0 +1,44 @@
+useDotenv: true
+
+service: create-notion-from-slack
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: ap-northeast-1
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource:
+            - "arn:aws:logs:*:*:*"
+
+functions:
+  main:
+    handler: handler.main
+    memorySize: 256
+    timeout: 30
+    environment:
+      SLACK_USER_TOKEN: ${env:SLACK_USER_TOKEN}
+      REACTION_NAME: ${env:REACTION_NAME}
+      NOTION_DATABASE_ID: ${env:NOTION_DATABASE_ID}
+      NOTION_API_TOKEN: ${env:NOTION_API_TOKEN}
+    events:
+      - http:
+          path: api/create
+          method: post
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+
+

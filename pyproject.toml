@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "create-notion-from-slack"
+version = "0.1.0"
+description = ""
+authors = ["KuragariKurage <22191637+KuragariKurage@users.noreply.github.com>"]
+readme = "README.md"
+packages = [{include = "create_notion_from_slack"}]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.10"
+slack-sdk = "^3.21.3"
+notion-client = "^2.0.0"
+requests = "^2.31.0"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.3.0"
+black = "^23.3.0"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
