@@ -80,6 +80,14 @@ def main(event: dict, context: dict):
     body = json.loads(event["body"])
     logging.info(body)
 
+    # 再送の場合はスキップ
+    if "X-Slack-Retry-Num" in event["headers"]:
+        logging.info("X-Slack-Retry-Num exists. skipping.")
+        return {
+            "statusCode": 200,
+            "body": "X-Slack-Retry-Num exists. skipping.",
+        }
+
     if "event" in event["body"]:
         stamp = body["event"]["reaction"]
         if stamp != slack_reaction:

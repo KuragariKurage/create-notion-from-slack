@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "serverless-python-requirements": "^6.0.0"
+  },
+  "dependencies": {
+    "serverless-plugin-log-retention": "^2.0.0"
   }
 }
